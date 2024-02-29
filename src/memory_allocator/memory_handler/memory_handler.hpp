@@ -35,11 +35,11 @@ public:
     ~Memory_handler() = default;
 
     /*
-    @brief Se obtiene una referencia al elemento, sin embargo, en caso de que ocurra defragmentación, la referencia se hace inválida.
+    @brief Se obtiene un puntero al elemento, sin embargo, en caso de que ocurra defragmentación, el puntero se invalida.
     */
     template <typename T>
-    T& get_elem() {
-        return *static_cast<T*>(child->get_data());
+    T* get_elem() const {
+        return static_cast<T*>(child->get_data());
     }
 
     bool es_valido();

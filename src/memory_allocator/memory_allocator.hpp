@@ -7,17 +7,18 @@
 #include <cstring>
 #include <algorithm>
 #include <cstdint>
+#include <functional>
+#include <utility>
 #include <Arduino.h>
 
 
-template <std::size_t N>
 class Memory_allocator {
 private:
-    const static std::size_t max_size = N, capacidad_handlers = N / 4;
-    std::size_t bytes_ocupados = 0, cantidad_handlers = 0, cantidad_bloques = 0, memoria_disponible = max_size;
-    uint8_t buffer[max_size];
-    Block_pointer bloques_reservados[capacidad_handlers];
-    Memory_handler handlers[capacidad_handlers], handler_invalido;
+    const std::size_t max_size, capacidad_handlers;
+    std::size_t bytes_ocupados = 0, cantidad_handlers = 0, cantidad_bloques = 0, memoria_disponible;
+    uint8_t* buffer;
+    Block_pointer* bloques_reservados;
+    Memory_handler* handlers, handler_invalido;
 
     void move_memory(uint8_t* dest, uint8_t* src, std::size_t count) {
         Serial.println("Flag move_memory 1");
@@ -27,6 +28,7 @@ private:
         Serial.println("Flag move_memory 3");
     }
     void desfragmentar() {
+        if (cantidad_handlers == 0) return;
         Serial.println("Flag desfragmentar 1");
         uint8_t* ancla = buffer, * dir_bloque;
         std::size_t block_size;
@@ -63,15 +65,23 @@ private:
         return bloque2.get_parent() == nullptr || bloque1.get_parent() <= bloque2.get_parent();
     }
 public:
-    Memory_allocator() = default;
-    ~Memory_allocator() = default;
+    Memory_allocator(std::size_t _max_size)
+        : max_size(_max_size), capacidad_handlers(_max_size / 4), memoria_disponible(_max_size) {
+        buffer = new uint8_t[max_size];
+        bloques_reservados = new Block_pointer[capacidad_handlers];
+        handlers = new Memory_handler[capacidad_handlers];
+    }
+    ~Memory_allocator() {
+        delete[] buffer;
+        delete[] bloques_reservados;
+        delete[] handlers;
+    }
 
     template <typename T, typename... Args>
-    Memory_handler& acquire(Args... args) {
+    Memory_handler& acquire(std::size_t cantidad_bytes, Args&&... args) {
         Serial.println("Flag get_memory 1");
         if (cantidad_handlers >= capacidad_handlers) return handler_invalido;
         Serial.println("Flag get_memory 2");
-        std::size_t cantidad_bytes = sizeof(T);
         if (memoria_disponible < cantidad_bytes) {
             Serial.println("Flag get_memory 3");
             if (bytes_ocupados + cantidad_bytes <= max_size) {
@@ -98,11 +108,11 @@ public:
         }
         Serial.println("Flag get_memory 11");
         cantidad_handlers++;
-        uint8_t* memoria_a_asignar;
+        T* memoria_a_asignar;
         if (cantidad_bloques == 0)
-            memoria_a_asignar = buffer;
+            memoria_a_asignar = reinterpret_cast<T*>(buffer);
         else
-            memoria_a_asignar = static_cast<uint8_t*>(
+            memoria_a_asignar = static_cast<T*>(
                 bloques_reservados[cantidad_bloques - 1].get_data()
                 ) + bloques_reservados[cantidad_bloques - 1].get_block_size();
         Serial.println("Flag get_memory 12");
@@ -118,7 +128,7 @@ public:
         Serial.println("Flag get_memory 17");
         Serial.print("cantidad_bloques = ");
         Serial.println(cantidad_bloques);
-        new (memoria_a_asignar) T(args...);
+        new (memoria_a_asignar) T(std::forward<Args>(args)...);
         Serial.println("Flag get_memory 18");
         return *handler_a_usar;
     }
@@ -128,6 +138,9 @@ public:
         handler.get_child().anular();
         handler.hacer_invalido();
         cantidad_handlers--;
+    }
+    std::size_t available_memory() const {
+        return max_size - bytes_ocupados;
     }
 };
 
