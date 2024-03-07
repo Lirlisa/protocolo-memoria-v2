@@ -7,22 +7,44 @@ class Memory_handler;
 
 class Block_pointer {
 private:
-    Memory_handler* parent = nullptr; //externo
-    void* data = nullptr; //externo
-    std::size_t block_size = 0;
-public:
-    Block_pointer();
-    Block_pointer(Memory_handler* _parent, void* _data, std::size_t _block_size);
-    ~Block_pointer();
+    Memory_handler* parent = nullptr; // Externo
+    void* block_start = nullptr; // Necesario para el alineamiento. Externo
+    void* data_start = nullptr; // Externo
+    std::size_t block_size = 0; // El tamaño del bloque tomando en cuenta el alineamiento.
+    std::size_t data_size = 0; // El tamaño sólo de los datos.
+    std::size_t alineamiento = 0;
+    std::size_t data_type_size = 0;
+    bool congelado = false;
 
+public:
+    Block_pointer() = default;
+    Block_pointer(
+        Memory_handler* _parent, void* _block_start,
+        void* _data_start, std::size_t _block_size,
+        std::size_t _data_size, std::size_t _alineamiento,
+        std::size_t _data_type_size
+    );
+    ~Block_pointer() = default;
+
+    Memory_handler* get_parent() const;
+    void* get_block_start() const;
     void* get_data() const;
     std::size_t get_block_size() const;
-    Memory_handler* get_parent() const;
+    std::size_t get_data_size() const;
+    std::size_t get_alineamiento() const;
+    std::size_t get_data_type_size() const;
+    bool esta_congelado() const;
 
     void set_parent(Memory_handler* _parent);
+    void set_block_start(void* ptr);
     void set_data(void* _data);
     void set_block_size(std::size_t _block_size);
+    void set_data_size(std::size_t _data_size);
+    void set_alineamiento(std::size_t _alineamiento);
+    void set_data_type_size(std::size_t _data_type_size);
     void anular();
+    void congelar();
+    void descongelar();
 };
 
 class Memory_handler {

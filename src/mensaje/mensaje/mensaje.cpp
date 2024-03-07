@@ -1,9 +1,10 @@
 #include <mensaje/mensaje/mensaje.hpp>
+#include <memory_allocator/memory_allocator.hpp>
+#include <memory_allocator/memory_handler/memory_handler.hpp>
 #include <cstdint>
 #include <cstring>
 #include <Arduino.h>
 #include <algorithm>
-#include <memory_allocator/memory_allocator.hpp>
 
 
 Mensaje::Mensaje(Memory_allocator& _memoria) : memoria(_memoria), payload_handler(memoria.acquire<uint8_t>(payload_max_size)) {
@@ -38,18 +39,18 @@ Mensaje::Mensaje(
     Serial.println("Flag Mensaje Constructor 11");
 }
 
-Mensaje::Mensaje(const Mensaje& original, Memory_allocator& _memoria) :
+Mensaje::Mensaje(Memory_handler& mensaje_original_handler, Memory_allocator& _memoria) :
     memoria(_memoria), payload_handler(memoria.acquire<uint8_t>(payload_max_size)) {
-    Serial.println("Flag Mensaje constructor v3");
-    ttr = original.ttr;
-    emisor = original.emisor;
-    receptor = original.receptor;
-    nonce = original.nonce;
-    tipo_payload = original.tipo_payload;
-    transmission_size = std::min(original.transmission_size, raw_message_max_size);
-    payload_size = std::min((unsigned)(original.payload_size), payload_max_size);
+    Mensaje* original = mensaje_original_handler.get_elem<Mensaje>();
+    ttr = original->ttr;
+    emisor = original->emisor;
+    receptor = original->receptor;
+    nonce = original->nonce;
+    tipo_payload = original->tipo_payload;
+    transmission_size = std::min(original->transmission_size, raw_message_max_size);
+    payload_size = std::min((unsigned)(original->payload_size), payload_max_size);
     if (payload_size > 0)
-        std::memcpy(payload_handler.get_elem<uint8_t>(), original.payload_handler.get_elem<uint8_t>(), payload_size);
+        std::memcpy(payload_handler.get_elem<uint8_t>(), original->payload_handler.get_elem<uint8_t>(), payload_size);
 }
 
 Mensaje::Mensaje(Memory_handler& data_handler, uint8_t largo_data, Memory_allocator& _memoria) :
@@ -81,7 +82,7 @@ Mensaje::Mensaje(Memory_handler& data_handler, uint8_t largo_data, Memory_alloca
 }
 
 Mensaje::~Mensaje() {
-    memoria.release(payload_handler);
+    memoria.release<uint8_t>(payload_handler, payload_max_size);
 }
 
 bool Mensaje::operator!=(const Mensaje& other) const {
@@ -112,7 +113,7 @@ Mensaje& Mensaje::operator=(const Mensaje& other) {
 /*
 @brief Imprime los primeros bytes del payload.
 */
-void Mensaje::peek(unsigned cant_bytes) {
+void Mensaje::peek(unsigned cant_bytes) const {
     if (payload_size < 1) {
         Serial.println("Sin payload");
         return;
@@ -125,10 +126,10 @@ void Mensaje::peek(unsigned cant_bytes) {
         sprintf(repr, "%02x", payload[i]);
         Serial.print(repr);
     }
-    memoria.release(repr_handler);
+    memoria.release<char>(repr_handler, 5);
 }
 
-void Mensaje::print(unsigned cant_bytes) {
+void Mensaje::print(unsigned cant_bytes) const {
     Serial.print("Emisor: ");
     Serial.println(emisor);
     Serial.print("Receptor: ");
@@ -181,18 +182,32 @@ void Mensaje::print(unsigned cant_bytes) {
 @brief Crea mensaje para transmitir a partir del mensaje. El destino debe tener al menos 'transmission_size' bytes disponibles.
 */
 void Mensaje::parse_to_transmission(Memory_handler& destino_handler) const {
+    Serial.println("Flag Mensaje::parse_to_transmission 1");
     uint8_t* destino = destino_handler.get_elem<uint8_t>();
+    Serial.println("Flag Mensaje::parse_to_transmission 2");
     std::memcpy(destino, &emisor, 2); // 0, 1
+    Serial.println("Flag Mensaje::parse_to_transmission 3");
     std::memcpy(destino + 2, &receptor, 2); // 2, 3
+    Serial.println("Flag Mensaje::parse_to_transmission 4");
     std::memcpy(destino + 4, &nonce, 2); // 4, 5
+    Serial.println("Flag Mensaje::parse_to_transmission 5");
+    Serial.print("TTR: ");
+    Serial.println(ttr);
+    uint8_t aux = ttr & 0xff;
+    std::memcpy(destino + 6, &aux, 1);
 
-    destino[6] = (uint8_t)(ttr & 0xff); // 8 bits
+    // destino[6] = (uint8_t)(ttr & 0xff); // 8 bits
+    Serial.println("Flag Mensaje::parse_to_transmission 6");
     destino[7] = (uint8_t)((ttr >> 8) & 0xff); // 16 bits
+    Serial.println("Flag Mensaje::parse_to_transmission 7");
     destino[8] = (uint8_t)(((ttr >> 16) & 0x1f) << 3); // 21 bits
+    Serial.println("Flag Mensaje::parse_to_transmission 8");
 
     destino[8] |= tipo_payload & 0x7;
-
+    Serial.println("Flag Mensaje::parse_to_transmission 9");
+    Serial.println((uintptr_t)payload_handler.get_elem<uint8_t>(), HEX);
     std::memcpy(destino + message_without_payload_size, payload_handler.get_elem<uint8_t>(), payload_size);
+    Serial.println("Flag Mensaje::parse_to_transmission 10");
 }
 
 void Mensaje::setEmisor(uint16_t _emisor) {

@@ -2,6 +2,7 @@
 #define MENSAJE_HPP
 
 #include <memory_allocator/memory_allocator.hpp>
+#include <memory_allocator/memory_handler/memory_handler.hpp>
 #include <cstdint>
 
 
@@ -12,7 +13,7 @@ protected:
     uint8_t tipo_payload = 0, payload_size = 0;
 
     Memory_allocator& memoria;
-    Memory_handler& payload_handler;
+
     unsigned transmission_size = 0;
     const static unsigned message_without_payload_size = 9;
     const static uint16_t BROADCAST_CHANNEL_ID = 0xffff;
@@ -27,6 +28,7 @@ public:
 
     const static unsigned payload_max_size = 191;
     const static unsigned raw_message_max_size = message_without_payload_size + payload_max_size;
+    Memory_handler& payload_handler;
 
     Mensaje(Memory_allocator& _memoria);
 
@@ -35,7 +37,7 @@ public:
         uint16_t _nonce, uint8_t _tipo_payload, Memory_handler& payload_externo_handler,
         unsigned _payload_size, Memory_allocator& _memoria
     );
-    Mensaje(const Mensaje& original, Memory_allocator& _memoria);
+    Mensaje(Memory_handler& mensaje_original_handler, Memory_allocator& _memoria);
     Mensaje(Memory_handler& data_handler, uint8_t largo_data, Memory_allocator& _memoria);
     virtual ~Mensaje();
 
@@ -45,8 +47,8 @@ public:
 
     void parse_to_transmission(Memory_handler& destino_handler) const;
 
-    void peek(unsigned cant_bytes = 6);
-    void print(unsigned cant_bytes = 6);
+    void peek(unsigned cant_bytes = 6) const;
+    void print(unsigned cant_bytes = 6) const;
 
     void setEmisor(uint16_t _emisor);
     void setReceptor(uint16_t _receptor);
