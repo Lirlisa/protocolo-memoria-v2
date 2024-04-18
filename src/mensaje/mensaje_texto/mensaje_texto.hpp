@@ -1,6 +1,7 @@
 #ifndef MENSAJE_TEXTO_HPP
 #define MENSAJE_TEXTO_HPP
 
+#include <global/memoria.hpp>
 #include <texto/texto.hpp>
 #include <mensaje/mensaje/mensaje.hpp>
 #include <memory_allocator/memory_allocator.hpp>
@@ -15,14 +16,13 @@ private:
     Memory_handler* arreglo_textos_handler = nullptr;
     std::size_t cantidad_textos = 0;
 public:
-    Mensaje_texto(Memory_allocator& _memoria);
+    Mensaje_texto();
     Mensaje_texto(
         uint32_t _ttr, uint16_t _emisor, uint16_t _receptor,
-        uint16_t _nonce, Memory_handler& payload_externo_handler, int _payload_size,
-        Memory_allocator& _memoria
+        uint16_t _nonce, Memory_handler& payload_externo_handler, int _payload_size
     );
-    Mensaje_texto(Memory_handler& mensaje_origen_handler, Memory_allocator& _memoria);
-    Mensaje_texto(Memory_allocator& _memoria, Memory_handler& mensaje_texto_origen_handler);
+    Mensaje_texto(Memory_handler& mensaje_origen_handler);
+    Mensaje_texto(Memory_handler& mensaje_texto_origen_handler, bool flag = false);
     ~Mensaje_texto();
 
     void print();
@@ -41,8 +41,8 @@ public:
 
 class Mensaje_texto_generator {
 private:
+    Memory_allocator& memoria = Memoria::memoria;
     Memory_handler& fuente_handler;
-    Memory_allocator& memoria;
     Memory_handler& handler_arreglo_textos;
     uint32_t ttr;
     uint16_t emisor;
@@ -54,8 +54,7 @@ private:
 public:
     Mensaje_texto_generator(
         Memory_handler& _fuente_handler, uint32_t _ttr, uint16_t _emisor, uint16_t _receptor,
-        uint16_t _nonce, Memory_handler& _handler_arreglo_textos, std::size_t _cantidad_textos,
-        Memory_allocator& _memoria
+        uint16_t _nonce, Memory_handler& _handler_arreglo_textos, std::size_t _cantidad_textos
     );
 
     std::size_t next();

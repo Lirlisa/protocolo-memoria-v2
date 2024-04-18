@@ -42,6 +42,7 @@
         "streambuf": "cpp",
         "cstring": "cpp",
         "functional": "cpp",
-        "iterator": "cpp"
+        "iterator": "cpp",
+        "unordered_set": "cpp"
     }
 }

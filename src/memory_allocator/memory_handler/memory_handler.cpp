@@ -1,5 +1,7 @@
 #include <memory_allocator/memory_handler/memory_handler.hpp>
+#include <Arduino.h>
 #include <cstdint>
+
 
 Memory_handler::Memory_handler(Block_pointer* _child) {
     valido = true;
@@ -28,7 +30,35 @@ Block_pointer& Memory_handler::get_child() {
     return *child;
 }
 
+void Memory_handler::congelar_bloque() {
+    child->congelar();
+}
+
+void Memory_handler::descongelar_bloque() {
+    child->descongelar();
+}
+
+void Memory_handler::set_vacio(bool _vacio) {
+    vacio = _vacio;
+}
+
+bool Memory_handler::esta_vacio() const {
+    return vacio;
+}
+
+void Memory_handler::print() const {
+    Serial.print("Dirección propia: ");
+    Serial.println((uintptr_t)this, HEX);
+    Serial.print("Vacío?: ");
+    Serial.println(vacio ? "Sí" : "No");
+    Serial.print("Válido?: ");
+    Serial.println(valido ? "Sí" : "No");
+    Serial.print("Bloque hijo: ");
+    Serial.println((uintptr_t)child, HEX);
+}
+
 /*--------------------------*/
+
 
 Block_pointer::Block_pointer(
     Memory_handler* _parent, void* _block_start,
@@ -99,6 +129,7 @@ void Block_pointer::set_data_size(std::size_t _data_size) {
 
 void Block_pointer::anular() {
     parent = nullptr;
+    congelado = false;
     // data_start = nullptr;
     // block_start = nullptr;
     // data_size = 0;
@@ -119,4 +150,27 @@ void Block_pointer::congelar() {
 
 void Block_pointer::descongelar() {
     congelado = false;
+}
+
+void Block_pointer::print() const {
+    Serial.print("Dirección propia: ");
+    Serial.println((uintptr_t)this, HEX);
+    Serial.print("Handler padre: ");
+    Serial.println((uintptr_t)parent, HEX);
+    Serial.print("Comienzo bloque: ");
+    Serial.println((uintptr_t)block_start, HEX);
+    Serial.print("Comienzo data: ");
+    Serial.println((uintptr_t)data_start, HEX);
+    Serial.print("Fin bloque: ");
+    Serial.println((uintptr_t)(static_cast<uint8_t*>(block_start) + block_size - 1), HEX);
+    Serial.print("Tamaño bloque: ");
+    Serial.println(block_size);
+    Serial.print("Tamaño data: ");
+    Serial.println(data_size);
+    Serial.print("Alineaminto: ");
+    Serial.println(alineamiento);
+    Serial.print("Tamaño tipo de dato: ");
+    Serial.println(data_type_size);
+    Serial.print("Congelado?: ");
+    Serial.println(congelado ? "Sí" : "No");
 }

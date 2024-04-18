@@ -1,66 +1,146 @@
 #include <memory_allocator/memory_allocator.hpp>
 #include <memory_allocator/memory_handler/memory_handler.hpp>
-#include <mensaje/mensaje/mensaje.hpp>
-#include <mensaje/mensaje_texto/mensaje_texto.hpp>
-#include <texto/texto.hpp>
+#include <global/memoria.hpp>
+#include <mapa/mapa.hpp>
 #include <Arduino.h>
-#include <memory>
+#include <unordered_map>
+#include <utility>
+#include <LoRa.h>
 #include <new>
 
+using par_id_costo = std::pair<uint16_t, float>;
+using tipo_tabla = std::unordered_map<
+    uint16_t,
+    float,
+    std::hash<uint16_t>,
+    std::equal_to<uint16_t>,
+    CAllocator<par_id_costo>
+>;
+using par_id_vecinos = std::pair<uint16_t, tipo_tabla>;
+using tipo_grafo = std::unordered_map<
+    uint16_t,
+    tipo_tabla,
+    std::hash<uint16_t>,
+    std::equal_to<uint16_t>,
+    CAllocator<par_id_vecinos>
+>;
 
 void setup() {
     Serial.begin(9600);
     while (!Serial) {};
-    Serial.println("Serial begin");
-
-    Memory_allocator memoria(2000);
+    Serial.println("Serial iniciado");
+    if (!LoRa.begin(915E6)) {
+        Serial.println("Starting LoRa failed!");
+        while (1);
+    }
     Serial.println("Flag 1");
-    Serial.println(memoria.get_cantidad_handlers());
+    Memory_allocator& memoria = Memoria::memoria;
+    Serial.print("Memoria disponible: ");
+    Serial.println(memoria.available_memory());
+    Serial.print("Bloques usados: ");
     Serial.println(memoria.get_cantidad_bloques());
-    Memory_handler& handler_payload = memoria.acquire<char>(212);
-    char* payload = handler_payload.get_elem<char>();
-    std::strcpy(payload, "Texto al límite?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789{}[]?.,;:-_+*~'\"|°!#$%&/()=ABCDEFGABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789{}[]?.,;:-_+*~'\"|°!#$%&/()=ABCDEFG");
+    Serial.print("Handlers usados: ");
+    Serial.println(memoria.get_cantidad_handlers());
+    Serial.println("----------");
 
-    Memory_handler& handler_texto = memoria.acquire<Texto>(sizeof(Texto), 1, 2, 3, 4, 212, handler_payload, memoria);
-    Serial.print("Pos Texto: ");
-    Serial.println((uintptr_t)handler_texto.get_elem<Texto>(), HEX);
+    Memory_handler& mapa_handler = memoria.acquire<Mapa>(sizeof(Mapa), 420);
+    Serial.print("Handler mapa_handler válido? ");
+    Serial.println(mapa_handler.es_valido() ? "Sí" : "No");
+    Serial.println("Flag 2");
+    mapa_handler.get_elem<Mapa>()->actualizar_propias_probabilidades(5);
+    mapa_handler.get_elem<Mapa>()->actualizar_propias_probabilidades(4);
+    mapa_handler.get_elem<Mapa>()->actualizar_propias_probabilidades(4);
 
-    std::size_t payload_size = handler_texto.get_elem<Texto>()->transmission_size();
-    Memory_handler& handler_texto_transmision = memoria.acquire<uint8_t>(payload_size);
-    handler_texto.get_elem<Texto>()->parse_to_transmission(handler_texto_transmision);
-    Memory_handler& handler_mensaje_texto = memoria.acquire<Mensaje_texto>(
-        sizeof(Mensaje_texto),
-        1, 2, 3,
-        4, handler_texto_transmision, payload_size,
-        memoria
+    unsigned cant_bytes = mapa_handler.get_elem<Mapa>()->get_size_vector_probabilidad();
+    Memory_handler& vector_prob_handler = memoria.acquire<uint8_t>(cant_bytes);
+    mapa_handler.get_elem<Mapa>()->obtener_vector_probabilidad(vector_prob_handler);
+    uint16_t total_pares;
+    std::memcpy(&total_pares, vector_prob_handler.get_elem<uint8_t>(), sizeof(uint16_t));
+    unsigned cant_mensajes = total_pares / Mensaje_vector::max_cantidad_pares_por_payload + 1;
+    Memory_handler& mensaje_vector_handler = memoria.acquire_simple<Mensaje_vector>(sizeof(Mensaje_vector) * cant_mensajes);
+    Memory_handler& payload_aux = memoria.acquire_simple<uint8_t>(Mensaje::payload_max_size);
+    uint16_t ultimo_byte_agregado = 1;
+    uint8_t i;
+    for (std::size_t mensaje_n = 0; mensaje_n < cant_mensajes; ++mensaje_n) {
+        for (i = 0; i < Mensaje_vector::max_cantidad_pares_por_payload && 1 + i * (sizeof(float) + sizeof(uint16_t)) + ultimo_byte_agregado < cant_bytes; ++i) {
+            std::memcpy(
+                payload_aux.get_elem<uint8_t>() + 1 + i * (sizeof(float) + sizeof(uint16_t)),
+                vector_prob_handler.get_elem<uint8_t>() + ultimo_byte_agregado + 1 + i * (sizeof(float) + sizeof(uint16_t)),
+                sizeof(uint16_t)
+            );
+            std::memcpy(
+                payload_aux.get_elem<uint8_t>() + 1 + i * (sizeof(float) + sizeof(uint16_t)) + sizeof(uint16_t),
+                vector_prob_handler.get_elem<uint8_t>() + ultimo_byte_agregado + 1 + i * (sizeof(float) + sizeof(uint16_t)) + sizeof(uint16_t),
+                sizeof(float)
+            );
+        }
+        *payload_aux.get_elem<uint8_t>() = i;
+        ultimo_byte_agregado += i * (sizeof(float) + sizeof(uint16_t));
+        new (mensaje_vector_handler.get_elem<Mensaje_vector>()) Mensaje_vector(1, 2, 3, 5, payload_aux, 1 + i * (sizeof(float) + sizeof(uint16_t)));
+    }
+    memoria.release<uint8_t>(vector_prob_handler);
+    memoria.release<uint8_t>(payload_aux);
+    Serial.println("Flag 3");
+    Serial.print("Memoria disponible: ");
+    Serial.println(memoria.available_memory());
+    Serial.print("Bloques usados: ");
+    Serial.println(memoria.get_cantidad_bloques());
+    Serial.print("Handlers usados: ");
+    Serial.println(memoria.get_cantidad_handlers());
+
+    cant_bytes = mensaje_vector_handler.get_elem<Mensaje_vector>()->get_transmission_size();
+    Memory_handler& transmission_handler = memoria.acquire<uint8_t>(cant_bytes);
+    mensaje_vector_handler.get_elem<Mensaje_vector>()->parse_to_transmission(transmission_handler);
+    Memory_handler& mensaje_handler = memoria.acquire_simple<Mensaje>(sizeof(Mensaje));
+    new (mensaje_handler.get_elem<Mensaje>()) Mensaje(transmission_handler, cant_bytes);
+
+    Serial.println("Flag 4");
+    Serial.print("Memoria disponible: ");
+    Serial.println(memoria.available_memory());
+    Serial.print("Bloques usados: ");
+    Serial.println(memoria.get_cantidad_bloques());
+    Serial.print("Handlers usados: ");
+    Serial.println(memoria.get_cantidad_handlers());
+
+    Memory_handler& mensaje_vector_handler2 = memoria.acquire_simple<Mensaje_vector>(sizeof(Mensaje_vector));
+    new (mensaje_vector_handler2.get_elem<Mensaje_vector>()) Mensaje_vector(mensaje_handler);
+    uint8_t cant_pares = mensaje_vector_handler2.get_elem<Mensaje_vector>()->get_cantidad_pares();
+
+    Memory_handler& mapa_handler2 = memoria.acquire<Mapa>(sizeof(Mapa), 30);
+    Serial.print("Handler mapa_handler válido? ");
+    Serial.println(mapa_handler2.es_valido() ? "Sí" : "No");
+    Serial.println("Flag 5");
+    mapa_handler2.get_elem<Mapa>()->actualizar_propias_probabilidades(1);
+    mapa_handler2.get_elem<Mapa>()->actualizar_propias_probabilidades(2);
+    mapa_handler2.get_elem<Mapa>()->actualizar_propias_probabilidades(3);
+    mapa_handler2.get_elem<Mapa>()->actualizar_probabilidades(
+        420,
+        *mensaje_vector_handler2.get_elem<Mensaje_vector>()->get_pares(),
+        cant_pares
     );
-    memoria.release<uint8_t>(handler_texto_transmision, payload_size);
-    memoria.release<Texto>(handler_texto);
-    memoria.release<char>(handler_payload, 212);
-    Serial.println("----- Mensaje inicial -----");
-    handler_mensaje_texto.get_elem<Mensaje_texto>()->print();
-    Serial.println("----- Fin Mensaje inicial -----");
+    mapa_handler2.get_elem<Mapa>()->print();
+    Serial.println("Flag 6");
+    Serial.print("Memoria disponible: ");
+    Serial.println(memoria.available_memory());
+    Serial.print("Bloques usados: ");
+    Serial.println(memoria.get_cantidad_bloques());
+    Serial.print("Handlers usados: ");
+    Serial.println(memoria.get_cantidad_handlers());
+
+    memoria.release<Mapa>(mapa_handler);
+    memoria.release<Mapa>(mapa_handler2);
+    memoria.release<Mensaje_vector>(mensaje_vector_handler);
+    memoria.release<Mensaje_vector>(mensaje_vector_handler2);
+    memoria.release<uint8_t>(transmission_handler);
+    memoria.release<Mensaje>(mensaje_handler);
     memoria.force_defragmentation();
-
-    payload_size = handler_mensaje_texto.get_elem<Mensaje_texto>()->get_transmission_size();
-    Memory_handler& handler_mensaje_transmision = memoria.acquire<uint8_t>(payload_size);
-    handler_mensaje_texto.get_elem<Mensaje_texto>()->parse_to_transmission(handler_mensaje_transmision);
-    Memory_handler& handler_mensaje_desde_transmision = memoria.acquire<Mensaje>(
-        sizeof(Mensaje),
-        handler_mensaje_transmision,
-        payload_size,
-        memoria
-    );
-    Memory_handler& handler_mensaje_texto_desde_transmision = memoria.acquire<Mensaje_texto>(
-        sizeof(Mensaje_texto),
-        handler_mensaje_desde_transmision,
-        memoria
-    );
-    memoria.release<uint8_t>(handler_mensaje_transmision);
-    memoria.release<Mensaje>(handler_mensaje_desde_transmision);
-    Serial.println("----- Mensaje Final -----");
-    handler_mensaje_texto_desde_transmision.get_elem<Mensaje_texto>()->print();
-    Serial.println("----- Fin Mensaje Final xd -----");
+    Serial.println("Flag 7");
+    Serial.print("Memoria disponible: ");
+    Serial.println(memoria.available_memory());
+    Serial.print("Bloques usados: ");
+    Serial.println(memoria.get_cantidad_bloques());
+    Serial.print("Handlers usados: ");
+    Serial.println(memoria.get_cantidad_handlers());
 }
 
 void loop() {

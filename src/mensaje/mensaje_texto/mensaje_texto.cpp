@@ -7,18 +7,16 @@
 #include <algorithm>
 #include <unishox2.h>
 
-Mensaje_texto::Mensaje_texto(Memory_allocator& _memoria) : Mensaje(_memoria) {
+Mensaje_texto::Mensaje_texto() : Mensaje() {
     tipo_payload = Mensaje::PAYLOAD_TEXTO;
 }
 
 Mensaje_texto::Mensaje_texto(
     uint32_t _ttr, uint16_t _emisor, uint16_t _receptor,
-    uint16_t _nonce, Memory_handler& payload_externo_handler, int _payload_size,
-    Memory_allocator& _memoria
+    uint16_t _nonce, Memory_handler& payload_externo_handler, int _payload_size
 ) : Mensaje(
     _ttr, _emisor, _receptor,
-    _nonce, Mensaje::PAYLOAD_TEXTO, payload_externo_handler, _payload_size,
-    _memoria
+    _nonce, Mensaje::PAYLOAD_TEXTO, payload_externo_handler, _payload_size
 ) {
     uint16_t aux_nonce, aux_creador, aux_destinatario;
     uint8_t aux_saltos, * _payload = payload_handler.get_elem<uint8_t>(), pos_actual = 0;
@@ -35,9 +33,13 @@ Mensaje_texto::Mensaje_texto(
 
     cantidad_textos = _cantidad_textos;
     arreglo_textos_handler = &memoria.acquire<Texto>(sizeof(Texto) * cantidad_textos, memoria);
+    if (!arreglo_textos_handler->es_valido()) {
+        Serial.println("No se pudo crear mensaje por falta de memoria");
+        return;
+    }
     pos_inicio_texto = 0;
     _payload = payload_handler.get_elem<uint8_t>();
-    for (uint8_t i = 0; i < cantidad_textos; i++) {
+    for (uint8_t i = 0; i < cantidad_textos; ++i) {
         largo_texto_comprimido = _payload[pos_inicio_texto + Texto::size_variables_transmission - 1];
         if (largo_texto_comprimido >= 0) {
             memcpy(&aux_nonce, _payload + pos_inicio_texto, 2);
@@ -45,6 +47,8 @@ Mensaje_texto::Mensaje_texto(
             memcpy(&aux_destinatario, _payload + pos_inicio_texto + 4, 2);
             aux_saltos = _payload[pos_inicio_texto + 6]; // 1 byte
             Memory_handler& payload_txt_handler = memoria.acquire<char>(largo_texto_comprimido);
+            Serial.print("Pos handler en msj txt constructor 2: ");
+            Serial.println((uintptr_t)&payload_txt_handler, HEX);
             payload_txt = payload_txt_handler.get_elem<char>();
             _payload = payload_handler.get_elem<uint8_t>();
             std::memcpy(
@@ -52,26 +56,36 @@ Mensaje_texto::Mensaje_texto(
                 reinterpret_cast<char*>(_payload + pos_inicio_texto + Texto::size_variables_transmission),
                 largo_texto_comprimido
             );
-            new (arreglo_textos_handler->get_elem<Texto>() + pos_actual) Texto(memoria);
+
+            arreglo_textos_handler->congelar_bloque();
+            new ((arreglo_textos_handler->get_elem<Texto>()) + pos_actual) Texto(memoria);
             arreglo_textos_handler->get_elem<Texto>()[pos_actual++].update(
                 aux_nonce, aux_creador, aux_destinatario, aux_saltos, largo_texto_comprimido,
                 payload_txt_handler, true
             );
-            memoria.release<char>(payload_txt_handler, largo_texto_comprimido);
+            Serial.print("Texto en msg txt constructor válido? ");
+            Serial.println(arreglo_textos_handler->get_elem<Texto>()[pos_actual - 1].es_valido() ? "Sí" : "No");
+            arreglo_textos_handler->descongelar_bloque();
+            memoria.release<char>(payload_txt_handler);
+            Serial.println("Flag Mensaje_texto constructor 1");
         }
+        Serial.println("Flag Mensaje_texto constructor 2");
         pos_inicio_texto += Texto::size_variables_transmission + (largo_texto_comprimido > 0 ? largo_texto_comprimido : 0);
+        Serial.println("Flag Mensaje_texto constructor 3");
     }
 }
 
 /*
 @brief Crea una instancia de mensaje_texto basada en un mensaje base
 */
-Mensaje_texto::Mensaje_texto(Memory_handler& mensaje_origen_handler, Memory_allocator& _memoria)
-    : Mensaje(mensaje_origen_handler, _memoria) {
+Mensaje_texto::Mensaje_texto(Memory_handler& mensaje_origen_handler)
+    : Mensaje(mensaje_origen_handler) {
+    Serial.println("Flag Mensaje_texto constructor 3 1");
     uint16_t aux_nonce, aux_creador, aux_destinatario;
     uint8_t aux_saltos, * _payload = payload_handler.get_elem<uint8_t>(), pos_actual = 0;
     int largo_texto_comprimido, pos_inicio_texto, _cantidad_textos = 0, pos_size_contenido = Texto::size_variables_transmission - 1;
     char* payload_txt;
+    Serial.println("Flag Mensaje_texto constructor 3 2");
     do {
         if (
             _payload[pos_size_contenido] <= 0 ||
@@ -80,41 +94,66 @@ Mensaje_texto::Mensaje_texto(Memory_handler& mensaje_origen_handler, Memory_allo
         _cantidad_textos++;
         pos_size_contenido += _payload[pos_size_contenido] + Texto::size_variables_transmission;
     } while (pos_size_contenido < payload_size);
-
+    Serial.println("Flag Mensaje_texto constructor 3 3");
     cantidad_textos = _cantidad_textos;
     arreglo_textos_handler = &memoria.acquire<Texto>(sizeof(Texto) * cantidad_textos, memoria);
-
+    Serial.print("Handler en msg txt constructor válido?2: ");
+    Serial.println(arreglo_textos_handler->es_valido() ? "Sí" : "No");
+    Serial.println("Flag Mensaje_texto constructor 3 4");
     pos_inicio_texto = 0;
     for (uint8_t i = 0; i < _cantidad_textos; i++) {
+        Serial.println("Flag Mensaje_texto constructor 3 5");
         largo_texto_comprimido = _payload[pos_inicio_texto + Texto::size_variables_transmission - 1];
+        Serial.println("Flag Mensaje_texto constructor 3 6");
         if (largo_texto_comprimido >= 0) {
+            Serial.println("Flag Mensaje_texto constructor 3 7");
             memcpy(&aux_nonce, _payload + pos_inicio_texto, 2);
+            Serial.println("Flag Mensaje_texto constructor 3 8");
             memcpy(&aux_creador, _payload + pos_inicio_texto + 2, 2);
+            Serial.println("Flag Mensaje_texto constructor 3 9");
             memcpy(&aux_destinatario, _payload + pos_inicio_texto + 4, 2);
+            Serial.println("Flag Mensaje_texto constructor 3 10");
             aux_saltos = _payload[pos_inicio_texto + 6]; // 1 byte
+            Serial.println("Flag Mensaje_texto constructor 3 11");
             Memory_handler& payload_txt_handler = memoria.acquire<char>(largo_texto_comprimido);
+            Serial.println("Flag Mensaje_texto constructor 3 12");
             payload_txt = payload_txt_handler.get_elem<char>();
+            Serial.println("Flag Mensaje_texto constructor 3 13");
             _payload = payload_handler.get_elem<uint8_t>();
+            Serial.println("Flag Mensaje_texto constructor 3 14");
             std::memcpy(
                 payload_txt,
                 reinterpret_cast<char*>(_payload + pos_inicio_texto + Texto::size_variables_transmission),
                 largo_texto_comprimido
             );
+            Serial.println("Flag Mensaje_texto constructor 3 16");
+            arreglo_textos_handler->congelar_bloque();
+            Serial.println("Flag Mensaje_texto constructor 3 17");
             new (arreglo_textos_handler->get_elem<Texto>() + pos_actual) Texto(memoria);
+            Serial.println("Flag Mensaje_texto constructor 3 18");
             arreglo_textos_handler->get_elem<Texto>()[pos_actual++].update(
                 aux_nonce, aux_creador, aux_destinatario, aux_saltos, largo_texto_comprimido,
                 payload_txt_handler, true
             );
+            Serial.print("Texto en msg txt constructor válido?2 ");
+            Serial.println(arreglo_textos_handler->get_elem<Texto>()[pos_actual - 1].es_valido() ? "Sí" : "No");
+            Serial.println("Flag Mensaje_texto constructor 3 19");
+            arreglo_textos_handler->descongelar_bloque();
+            Serial.println("Flag Mensaje_texto constructor 3 20");
             memoria.release<char>(payload_txt_handler, largo_texto_comprimido);
+            Serial.println("Flag Mensaje_texto constructor 3 21");
         }
+        Serial.println("Flag Mensaje_texto constructor 3 22");
         pos_inicio_texto += Texto::size_variables_transmission + (largo_texto_comprimido > 0 ? largo_texto_comprimido : 0);
+        Serial.println("Flag Mensaje_texto constructor 3 23");
     }
+    Serial.println("Flag Mensaje_texto constructor 3 24");
 }
 
 /*
 @brief Crea una instancia de mensaje_texto basada en otro mensaje_texto
 */
-Mensaje_texto::Mensaje_texto(Memory_allocator& _memoria, Memory_handler& mensaje_texto_origen_handler)
+Mensaje_texto::Mensaje_texto(Memory_handler& mensaje_texto_origen_handler, bool flag)
     : Mensaje(
         mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->ttr,
         mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->emisor,
@@ -122,7 +161,7 @@ Mensaje_texto::Mensaje_texto(Memory_allocator& _memoria, Memory_handler& mensaje
         mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->nonce,
         Mensaje_texto::PAYLOAD_TEXTO,
         mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->payload_handler,
-        mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->payload_size, _memoria
+        mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->payload_size
     ) {
     if (mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->get_cantidad_textos() <= 0) return;
     cantidad_textos = mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->get_cantidad_textos();
@@ -152,8 +191,10 @@ void Mensaje_texto::print() {
         Serial.print(i + 1);
         Serial.print("/");
         Serial.println(cantidad_textos);
+        arreglo_textos_handler->congelar_bloque();
         textos = arreglo_textos_handler->get_elem<Texto>();
         textos[i].print();
+        arreglo_textos_handler->descongelar_bloque();
     }
 }
 
@@ -235,9 +276,8 @@ void Mensaje_texto::update(const Mensaje& origen) {
 
 Mensaje_texto_generator::Mensaje_texto_generator(
     Memory_handler& _fuente_handler, uint32_t _ttr, uint16_t _emisor, uint16_t _receptor,
-    uint16_t _nonce, Memory_handler& _handler_arreglo_textos, std::size_t _cantidad_textos,
-    Memory_allocator& _memoria
-) : fuente_handler(_fuente_handler), memoria(_memoria), handler_arreglo_textos(_handler_arreglo_textos) {
+    uint16_t _nonce, Memory_handler& _handler_arreglo_textos, std::size_t _cantidad_textos
+) : fuente_handler(_fuente_handler), handler_arreglo_textos(_handler_arreglo_textos) {
     ttr = _ttr;
     emisor = _emisor;
     receptor = _receptor;

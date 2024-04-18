@@ -3,6 +3,7 @@
 
 #include <memory_allocator/memory_allocator.hpp>
 #include <memory_allocator/memory_handler/memory_handler.hpp>
+#include <global/memoria.hpp>
 #include <cstdint>
 
 
@@ -12,7 +13,7 @@ protected:
     uint16_t emisor = 0, receptor = 0, nonce = 0;
     uint8_t tipo_payload = 0, payload_size = 0;
 
-    Memory_allocator& memoria;
+    Memory_allocator& memoria = Memoria::memoria;
 
     unsigned transmission_size = 0;
     const static unsigned message_without_payload_size = 9;
@@ -30,15 +31,15 @@ public:
     const static unsigned raw_message_max_size = message_without_payload_size + payload_max_size;
     Memory_handler& payload_handler;
 
-    Mensaje(Memory_allocator& _memoria);
+    Mensaje();
 
     Mensaje(
         uint32_t _ttr, uint16_t _emisor, uint16_t _receptor,
         uint16_t _nonce, uint8_t _tipo_payload, Memory_handler& payload_externo_handler,
-        unsigned _payload_size, Memory_allocator& _memoria
+        unsigned _payload_size
     );
-    Mensaje(Memory_handler& mensaje_original_handler, Memory_allocator& _memoria);
-    Mensaje(Memory_handler& data_handler, uint8_t largo_data, Memory_allocator& _memoria);
+    Mensaje(Memory_handler& mensaje_original_handler);
+    Mensaje(Memory_handler& data_handler, uint8_t largo_data);
     virtual ~Mensaje();
 
     Mensaje& operator=(const Mensaje& other);

@@ -45,11 +45,14 @@ public:
     void anular();
     void congelar();
     void descongelar();
+
+    void print() const;
 };
 
 class Memory_handler {
 private:
-    bool valido = false;
+    bool vacio = true;
+    bool valido = false; // ser válido implica que está en uso, ya sea por data o espacio vacío
     Block_pointer* child = nullptr; // externo
 public:
     Memory_handler() = default;
@@ -69,6 +72,11 @@ public:
     void hacer_invalido();
     void set_child(Block_pointer* _child);
     Block_pointer& get_child();
+    void congelar_bloque();
+    void descongelar_bloque();
+    void set_vacio(bool _vacio);
+    bool esta_vacio() const;
+    void print() const;
 };
 
 

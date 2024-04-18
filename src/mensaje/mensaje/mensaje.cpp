@@ -7,40 +7,28 @@
 #include <algorithm>
 
 
-Mensaje::Mensaje(Memory_allocator& _memoria) : memoria(_memoria), payload_handler(memoria.acquire<uint8_t>(payload_max_size)) {
-    Serial.println("Flag Mensaje constructor v2");
+Mensaje::Mensaje() : payload_handler(memoria.acquire<uint8_t>(payload_max_size)) {
 }
 
 Mensaje::Mensaje(
     uint32_t _ttr, uint16_t _emisor, uint16_t _receptor,
     uint16_t _nonce, uint8_t _tipo_payload, Memory_handler& payload_externo_handler,
-    unsigned _payload_size, Memory_allocator& _memoria
-) : memoria(_memoria), payload_handler(memoria.acquire<uint8_t>(payload_max_size)) {
-    Serial.println("Flag Mensaje Constructor 1");
+    unsigned _payload_size
+) : payload_handler(memoria.acquire<uint8_t>(payload_max_size)) {
     ttr = _ttr;
-    Serial.println("Flag Mensaje Constructor 2");
     emisor = _emisor;
-    Serial.println("Flag Mensaje Constructor 3");
     receptor = _receptor;
-    Serial.println("Flag Mensaje Constructor 4");
     nonce = _nonce;
-    Serial.println("Flag Mensaje Constructor 5");
     tipo_payload = _tipo_payload;
-    Serial.println("Flag Mensaje Constructor 6");
     payload_size = std::min(_payload_size, payload_max_size);
-    Serial.println("Flag Mensaje Constructor 7");
     transmission_size = message_without_payload_size + payload_size;
-    Serial.println("Flag Mensaje Constructor 8");
     if (payload_size > 0) {
-        Serial.println("Flag Mensaje Constructor 9");
         std::memcpy(payload_handler.get_elem<uint8_t>(), payload_externo_handler.get_elem<uint8_t>(), payload_size);
-        Serial.println("Flag Mensaje Constructor 10");
     }
-    Serial.println("Flag Mensaje Constructor 11");
 }
 
-Mensaje::Mensaje(Memory_handler& mensaje_original_handler, Memory_allocator& _memoria) :
-    memoria(_memoria), payload_handler(memoria.acquire<uint8_t>(payload_max_size)) {
+Mensaje::Mensaje(Memory_handler& mensaje_original_handler) :
+    payload_handler(memoria.acquire<uint8_t>(payload_max_size)) {
     Mensaje* original = mensaje_original_handler.get_elem<Mensaje>();
     ttr = original->ttr;
     emisor = original->emisor;
@@ -53,9 +41,8 @@ Mensaje::Mensaje(Memory_handler& mensaje_original_handler, Memory_allocator& _me
         std::memcpy(payload_handler.get_elem<uint8_t>(), original->payload_handler.get_elem<uint8_t>(), payload_size);
 }
 
-Mensaje::Mensaje(Memory_handler& data_handler, uint8_t largo_data, Memory_allocator& _memoria) :
-    memoria(_memoria), payload_handler(memoria.acquire<uint8_t>(payload_max_size)) {
-    Serial.println("Flag Mensaje constructor v4");
+Mensaje::Mensaje(Memory_handler& data_handler, uint8_t largo_data) :
+    payload_handler(memoria.acquire<uint8_t>(payload_max_size)) {
     uint32_t _ttr;
     uint16_t _emisor, _receptor, _nonce;
     uint8_t _tipo_payload, * data = data_handler.get_elem<uint8_t>();
