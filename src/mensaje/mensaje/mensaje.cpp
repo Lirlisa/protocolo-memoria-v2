@@ -27,8 +27,18 @@ Mensaje::Mensaje(
     }
 }
 
-Mensaje::Mensaje(Memory_handler& mensaje_original_handler) :
-    payload_handler(memoria.acquire<uint8_t>(payload_max_size)) {
+Mensaje::Mensaje(
+    uint32_t _ttr, uint16_t _emisor, uint16_t _receptor,
+    uint16_t _nonce, uint8_t _tipo_payload
+) : payload_handler(memoria.acquire<uint8_t>(payload_max_size)) {
+    ttr = _ttr;
+    emisor = _emisor;
+    receptor = _receptor;
+    nonce = _nonce;
+    tipo_payload = _tipo_payload;
+}
+
+Mensaje::Mensaje(Memory_handler& mensaje_original_handler) : payload_handler(memoria.acquire<uint8_t>(payload_max_size)) {
     Mensaje* original = mensaje_original_handler.get_elem<Mensaje>();
     ttr = original->ttr;
     emisor = original->emisor;

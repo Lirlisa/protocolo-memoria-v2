@@ -38,6 +38,10 @@ public:
         uint16_t _nonce, uint8_t _tipo_payload, Memory_handler& payload_externo_handler,
         unsigned _payload_size
     );
+    Mensaje(
+        uint32_t _ttr, uint16_t _emisor, uint16_t _receptor,
+        uint16_t _nonce, uint8_t _tipo_payload
+    );
     Mensaje(Memory_handler& mensaje_original_handler);
     Mensaje(Memory_handler& data_handler, uint8_t largo_data);
     virtual ~Mensaje();

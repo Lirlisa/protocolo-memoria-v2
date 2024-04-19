@@ -78,7 +78,7 @@ Mensaje_texto::Mensaje_texto(
 /*
 @brief Crea una instancia de mensaje_texto basada en un mensaje base
 */
-Mensaje_texto::Mensaje_texto(Memory_handler& mensaje_origen_handler)
+Mensaje_texto::Mensaje_texto(from_msg, Memory_handler& mensaje_origen_handler)
     : Mensaje(mensaje_origen_handler) {
     Serial.println("Flag Mensaje_texto constructor 3 1");
     uint16_t aux_nonce, aux_creador, aux_destinatario;
@@ -153,7 +153,7 @@ Mensaje_texto::Mensaje_texto(Memory_handler& mensaje_origen_handler)
 /*
 @brief Crea una instancia de mensaje_texto basada en otro mensaje_texto
 */
-Mensaje_texto::Mensaje_texto(Memory_handler& mensaje_texto_origen_handler, bool flag)
+Mensaje_texto::Mensaje_texto(from_msg_texto, Memory_handler& mensaje_texto_origen_handler)
     : Mensaje(
         mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->ttr,
         mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->emisor,

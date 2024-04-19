@@ -16,13 +16,16 @@ private:
     Memory_handler* arreglo_textos_handler = nullptr;
     std::size_t cantidad_textos = 0;
 public:
+    struct from_msg_texto final {};
+    struct from_msg final {};
+
     Mensaje_texto();
     Mensaje_texto(
         uint32_t _ttr, uint16_t _emisor, uint16_t _receptor,
         uint16_t _nonce, Memory_handler& payload_externo_handler, int _payload_size
     );
-    Mensaje_texto(Memory_handler& mensaje_origen_handler);
-    Mensaje_texto(Memory_handler& mensaje_texto_origen_handler, bool flag = false);
+    Mensaje_texto(from_msg_texto, Memory_handler& mensaje_texto_origen_handler);
+    Mensaje_texto(from_msg, Memory_handler& mensaje_origen_handler);
     ~Mensaje_texto();
 
     void print();
