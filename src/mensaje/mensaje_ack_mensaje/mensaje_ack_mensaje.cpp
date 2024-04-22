@@ -72,8 +72,8 @@ uint8_t Mensaje_ack_mensaje::obtener_cantidad_acks() const {
 }
 
 Mensaje_ack_mensaje_generator::Mensaje_ack_mensaje_generator(
-    Mensaje_ack_mensaje* _fuente, uint32_t _ttr, uint16_t _emisor,
-    uint16_t _receptor, Memory_handler& _fuente_handler, Memory_handler& _arreglo_acks_handler,
+    uint32_t _ttr, uint16_t _emisor, uint16_t _receptor,
+    Memory_handler& _fuente_handler, Memory_handler& _arreglo_acks_handler,
     std::size_t _cantidad_acks
 ) : fuente_handler(_fuente_handler), arreglo_acks_handler(_arreglo_acks_handler) {
     ttr = _ttr;

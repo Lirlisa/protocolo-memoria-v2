@@ -45,8 +45,8 @@ private:
     std::size_t cantidad_acks_restantes;
 public:
     Mensaje_ack_mensaje_generator(
-        Mensaje_ack_mensaje* _fuente, uint32_t _ttr, uint16_t _emisor,
-        uint16_t _receptor, Memory_handler& _fuente_handler, Memory_handler& _arreglo_acks_handler,
+        uint32_t _ttr, uint16_t _emisor, uint16_t _receptor,
+        Memory_handler& _fuente_handler, Memory_handler& _arreglo_acks_handler,
         std::size_t _cantidad_acks
     );
 
