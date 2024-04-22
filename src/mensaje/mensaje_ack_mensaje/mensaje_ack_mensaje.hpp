@@ -6,13 +6,9 @@
 #include <memory_allocator/memory_allocator.hpp>
 #include <memory_allocator/memory_handler/memory_handler.hpp>
 #include <cstdint>
-#include <vector>
 
 
 class Mensaje_ack_mensaje : public Mensaje {
-private:
-
-    uint8_t cantidad_acks = 0;
 public:
     struct from_msg final {};
     struct from_msg_ack_msg final {};

@@ -9,22 +9,18 @@
 
 Mensaje_ack_mensaje::Mensaje_ack_mensaje() : Mensaje() {
     tipo_payload = Mensaje::PAYLOAD_ACK_MENSAJE;
-    cantidad_acks = payload_handler.get_elem<uint8_t>()[0];
 }
 
 Mensaje_ack_mensaje::Mensaje_ack_mensaje(
     uint32_t _ttr, uint16_t _emisor, uint16_t _receptor, uint16_t _nonce,
     Memory_handler& payload_externo_handler, int _payload_size
-) : Mensaje(_ttr, _emisor, _receptor, _nonce, Mensaje::PAYLOAD_ACK_MENSAJE, payload_externo_handler, _payload_size) {
-    cantidad_acks = payload_handler.get_elem<uint8_t>()[0];
-}
+) : Mensaje(_ttr, _emisor, _receptor, _nonce, Mensaje::PAYLOAD_ACK_MENSAJE, payload_externo_handler, _payload_size) { }
 
 /*
 @brief Hay que asegurarse de que el payload tenga el formato correcto
 */
 Mensaje_ack_mensaje::Mensaje_ack_mensaje(from_msg, Memory_handler& handler_msg) : Mensaje(handler_msg) {
     tipo_payload = Mensaje::PAYLOAD_ACK_MENSAJE;
-    cantidad_acks = payload_handler.get_elem<uint8_t>()[0];
 }
 
 
@@ -37,17 +33,17 @@ Mensaje_ack_mensaje::Mensaje_ack_mensaje(
     handler_msg_ack_msg.get_elem<Mensaje_ack_mensaje>()->getNonce(),
     handler_msg_ack_msg.get_elem<Mensaje_ack_mensaje>()->payload_handler,
     handler_msg_ack_msg.get_elem<Mensaje_ack_mensaje>()->getPayloadSize()
-) {
-    cantidad_acks = payload_handler.get_elem<uint8_t>()[0];
-}
+) { }
 
 
 Mensaje_ack_mensaje::~Mensaje_ack_mensaje() { }
 
 /*
-@brief Almacena en el arreglo de uint8_t todos los ack (cada ack tiene largo 6 bytes)
+@brief Almacena en el buffer de uint8_t todos los ack (cada ack tiene largo 6 bytes)
+@warning El buffer debe poder almacenar la cantidad de bytes asociadas.
 */
 void Mensaje_ack_mensaje::obtener_acks(Memory_handler& buffer) const {
+    uint8_t cantidad_acks = payload_handler.get_elem<uint8_t>()[0];
     for (uint8_t i = 0; i < cantidad_acks; i++) {
         std::memcpy(
             buffer.get_elem<uint8_t>() + i * ack_size,
@@ -68,7 +64,7 @@ void Mensaje_ack_mensaje::obtener_acks(Memory_handler& buffer) const {
 }
 
 uint8_t Mensaje_ack_mensaje::obtener_cantidad_acks() const {
-    return cantidad_acks;
+    return payload_handler.get_elem<uint8_t>()[0];
 }
 
 Mensaje_ack_mensaje_generator::Mensaje_ack_mensaje_generator(
@@ -93,7 +89,7 @@ std::size_t Mensaje_ack_mensaje_generator::next() {
     if (cantidad_acks_restantes == 0 || pos_ack_actual >= pos_ack_final) return 0;
 
     uint8_t acks_por_enviar = std::min((unsigned)(Mensaje::payload_max_size - 1) / Mensaje_ack_mensaje::ack_size, cantidad_acks_restantes);;
-    Memory_handler& handler_payload = memoria.acquire_simple<uint8_t>(acks_por_enviar * Mensaje_ack_mensaje::ack_size);
+    Memory_handler& handler_payload = memoria.acquire_simple<uint8_t>(1 + acks_por_enviar * Mensaje_ack_mensaje::ack_size);
     uint8_t* _payload = handler_payload.get_elem<uint8_t>();
     uint8_t* arreglo_acks = arreglo_acks_handler.get_elem<uint8_t>();
     std::size_t pos_byte_ack;
