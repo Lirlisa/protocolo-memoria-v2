@@ -60,6 +60,8 @@ private:
 
 public:
     Mapa(uint16_t _id);
+    Mapa(Mapa& instance) = delete;
+    Mapa& operator=(const Mapa& instante) = delete;
     ~Mapa();
     void dijkstra();
     void actualizar_probabilidades(uint16_t origen, Memory_handler& handler_pares, std::size_t cantidad_pares);
