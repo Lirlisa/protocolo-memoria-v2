@@ -32,7 +32,7 @@ Mensaje_texto::Mensaje_texto(
     } while (pos_size_contenido < payload_size);
 
     cantidad_textos = _cantidad_textos;
-    arreglo_textos_handler = &memoria.acquire<Texto>(sizeof(Texto) * cantidad_textos, memoria);
+    arreglo_textos_handler = &memoria.acquire_simple<Texto>(sizeof(Texto) * cantidad_textos);
     if (!arreglo_textos_handler->es_valido()) {
         Serial.println("No se pudo crear mensaje por falta de memoria");
         return;
@@ -58,11 +58,12 @@ Mensaje_texto::Mensaje_texto(
             );
 
             arreglo_textos_handler->congelar_bloque();
-            new ((arreglo_textos_handler->get_elem<Texto>()) + pos_actual) Texto(memoria);
-            arreglo_textos_handler->get_elem<Texto>()[pos_actual++].update(
-                aux_nonce, aux_creador, aux_destinatario, aux_saltos, largo_texto_comprimido,
-                payload_txt_handler, true
+            new ((arreglo_textos_handler->get_elem<Texto>()) + pos_actual) Texto(
+                aux_nonce, aux_creador, aux_destinatario,
+                aux_saltos, largo_texto_comprimido, payload_txt_handler,
+                true
             );
+            ++pos_actual;
             Serial.print("Texto en msg txt constructor válido? ");
             Serial.println(arreglo_textos_handler->get_elem<Texto>()[pos_actual - 1].es_valido() ? "Sí" : "No");
             arreglo_textos_handler->descongelar_bloque();
@@ -96,7 +97,7 @@ Mensaje_texto::Mensaje_texto(from_msg, Memory_handler& mensaje_origen_handler)
     } while (pos_size_contenido < payload_size);
     Serial.println("Flag Mensaje_texto constructor 3 3");
     cantidad_textos = _cantidad_textos;
-    arreglo_textos_handler = &memoria.acquire<Texto>(sizeof(Texto) * cantidad_textos, memoria);
+    arreglo_textos_handler = &memoria.acquire_simple<Texto>(sizeof(Texto) * cantidad_textos);
     Serial.print("Handler en msg txt constructor válido?2: ");
     Serial.println(arreglo_textos_handler->es_valido() ? "Sí" : "No");
     Serial.println("Flag Mensaje_texto constructor 3 4");
@@ -129,12 +130,11 @@ Mensaje_texto::Mensaje_texto(from_msg, Memory_handler& mensaje_origen_handler)
             Serial.println("Flag Mensaje_texto constructor 3 16");
             arreglo_textos_handler->congelar_bloque();
             Serial.println("Flag Mensaje_texto constructor 3 17");
-            new (arreglo_textos_handler->get_elem<Texto>() + pos_actual) Texto(memoria);
-            Serial.println("Flag Mensaje_texto constructor 3 18");
-            arreglo_textos_handler->get_elem<Texto>()[pos_actual++].update(
+            new (arreglo_textos_handler->get_elem<Texto>() + pos_actual) Texto(
                 aux_nonce, aux_creador, aux_destinatario, aux_saltos, largo_texto_comprimido,
                 payload_txt_handler, true
             );
+            ++pos_actual;
             Serial.print("Texto en msg txt constructor válido?2 ");
             Serial.println(arreglo_textos_handler->get_elem<Texto>()[pos_actual - 1].es_valido() ? "Sí" : "No");
             Serial.println("Flag Mensaje_texto constructor 3 19");
@@ -165,13 +165,16 @@ Mensaje_texto::Mensaje_texto(from_msg_texto, Memory_handler& mensaje_texto_orige
     ) {
     if (mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->get_cantidad_textos() <= 0) return;
     cantidad_textos = mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->get_cantidad_textos();
-    arreglo_textos_handler = &memoria.acquire<Texto>(sizeof(Texto) * cantidad_textos, memoria);
+    arreglo_textos_handler = &memoria.acquire_simple<Texto>(sizeof(Texto) * cantidad_textos);
+    arreglo_textos_handler->congelar_bloque();
     for (unsigned i = 0; i < mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->get_cantidad_textos(); ++i) {
-        new (arreglo_textos_handler->get_elem<Texto>() + i) Texto(memoria);
-        arreglo_textos_handler->get_elem<Texto>()[i].update(
-            mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->arreglo_textos_handler->get_elem<Texto>() + i
+        mensaje_texto_origen_handler.congelar_bloque();
+        new (arreglo_textos_handler->get_elem<Texto>() + i) Texto(
+            *(mensaje_texto_origen_handler.get_elem<Mensaje_texto>()->arreglo_textos_handler->get_elem<Texto>() + i)
         );
+        mensaje_texto_origen_handler.descongelar_bloque();
     }
+    arreglo_textos_handler->descongelar_bloque();
 }
 
 Mensaje_texto::~Mensaje_texto() {
@@ -231,7 +234,7 @@ void Mensaje_texto::update(
     } while (pos_size_contenido < payload_size);
 
     cantidad_textos = _cantidad_textos;
-    arreglo_textos_handler = &memoria.acquire<Texto>(sizeof(Texto) * cantidad_textos, memoria);
+    arreglo_textos_handler = &memoria.acquire_simple<Texto>(sizeof(Texto) * cantidad_textos);
 
     pos_inicio_texto = 0;
     for (uint8_t i = 0; i < _cantidad_textos; i++) {
@@ -249,11 +252,11 @@ void Mensaje_texto::update(
                 reinterpret_cast<char*>(_payload + pos_inicio_texto + Texto::size_variables_transmission),
                 largo_texto_comprimido
             );
-            new (arreglo_textos_handler->get_elem<Texto>() + pos_actual) Texto(memoria);
-            arreglo_textos_handler->get_elem<Texto>()[pos_actual++].update(
+            new (arreglo_textos_handler->get_elem<Texto>() + pos_actual) Texto(
                 aux_nonce, aux_creador, aux_destinatario, aux_saltos, largo_texto_comprimido,
                 payload_txt_handler, true
             );
+            ++pos_actual;
             memoria.release<char>(payload_txt_handler, largo_texto_comprimido);
         }
         pos_inicio_texto += Texto::size_variables_transmission + (largo_texto_comprimido > 0 ? largo_texto_comprimido : 0);

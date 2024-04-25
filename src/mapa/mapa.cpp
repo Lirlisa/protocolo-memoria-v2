@@ -187,7 +187,7 @@ void Mapa::actualizar_propias_probabilidades(uint16_t* nodos_vistos, uint16_t ca
 
 /*
 @brief Almacena en el arreglo entregado todos los pares de costo e id de los nodos vecinos para el nodo base.
-Los primeros 2 bytes corresponden a la cantidad de pares dentro del arreglo
+@warning Los primeros 2 bytes corresponden a la cantidad de pares dentro del arreglo
 */
 void Mapa::obtener_vector_probabilidad(Memory_handler& pares_handler) const {
     uint16_t i = 0, cantidad_pares = handler_grafo.get_elem<tipo_grafo>()->at(id).size();

@@ -32,7 +32,6 @@ public:
     Memory_handler& payload_handler;
 
     Mensaje();
-
     Mensaje(
         uint32_t _ttr, uint16_t _emisor, uint16_t _receptor,
         uint16_t _nonce, uint8_t _tipo_payload, Memory_handler& payload_externo_handler,
@@ -44,9 +43,11 @@ public:
     );
     Mensaje(Memory_handler& mensaje_original_handler);
     Mensaje(Memory_handler& data_handler, uint8_t largo_data);
+    Mensaje(Mensaje&) = delete;
+    Mensaje& operator=(const Mensaje&) = delete;
+
     virtual ~Mensaje();
 
-    Mensaje& operator=(const Mensaje& other);
     bool operator!=(const Mensaje& other) const;
     bool operator==(const Mensaje& other) const;
 

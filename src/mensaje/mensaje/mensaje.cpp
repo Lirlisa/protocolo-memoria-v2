@@ -90,22 +90,22 @@ bool Mensaje::operator==(const Mensaje& other) const {
     return nonce == other.nonce && emisor == other.emisor && receptor == other.receptor;
 }
 
-Mensaje& Mensaje::operator=(const Mensaje& other) {
-    if (this == &other) {
-        return *this;
-    }
-    ttr = other.ttr;
-    emisor = other.emisor;
-    receptor = other.receptor;
-    nonce = other.nonce;
-    tipo_payload = other.tipo_payload;
-    payload_size = other.payload_size;
-    transmission_size = other.transmission_size;
-    if (payload_size > 0)
-        memcpy(payload_handler.get_elem<uint8_t>(), other.payload_handler.get_elem<uint8_t>(), payload_size);
+// Mensaje& Mensaje::operator=(const Mensaje& other) {
+//     if (this == &other) {
+//         return *this;
+//     }
+//     ttr = other.ttr;
+//     emisor = other.emisor;
+//     receptor = other.receptor;
+//     nonce = other.nonce;
+//     tipo_payload = other.tipo_payload;
+//     payload_size = other.payload_size;
+//     transmission_size = other.transmission_size;
+//     if (payload_size > 0)
+//         memcpy(payload_handler.get_elem<uint8_t>(), other.payload_handler.get_elem<uint8_t>(), payload_size);
 
-    return *this;
-}
+//     return *this;
+// }
 
 /*
 @brief Imprime los primeros bytes del payload.

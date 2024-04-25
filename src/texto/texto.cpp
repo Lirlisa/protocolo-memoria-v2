@@ -1,13 +1,12 @@
 #include "texto.hpp"
 #include <Arduino.h>
 
-Texto::Texto(Memory_allocator& _memoria) : memoria(_memoria) { }
 
 Texto::Texto(
     uint16_t _nonce, uint16_t _creador, uint16_t _destinatario,
     uint8_t _saltos, int _largo_texto,
-    Memory_handler& contenido_handler, Memory_allocator& _memoria, bool comprimido
-) : memoria(_memoria) {
+    Memory_handler& contenido_handler, bool comprimido
+) {
     Serial.print("Pos Interna Texto: ");
     Serial.println((uintptr_t)this, HEX);
     nonce = _nonce;
@@ -111,6 +110,32 @@ Texto::Texto(
     Serial.println("Flag Texto constructor 22");
 }
 
+Texto::Texto(const Texto& other) {
+    if (contenido_comprimido_handler != nullptr)
+        memoria.release<char>(*contenido_comprimido_handler);
+    nonce = other.nonce;
+    creador = other.creador;
+    destinatario = other.destinatario;
+    saltos = other.saltos;
+    valido = other.valido;
+    largo_texto = other.largo_texto;
+    largo_texto_comprimido = other.largo_texto_comprimido;
+
+    if (valido && largo_texto_comprimido > 0) {
+        contenido_comprimido_handler = &memoria.acquire<char>(largo_texto_comprimido);
+        if (!contenido_comprimido_handler->es_valido()) {
+            valido = false;
+            contenido_comprimido_handler = nullptr;
+            return;
+        }
+        std::memcpy(
+            contenido_comprimido_handler->get_elem<char>(),
+            other.contenido_comprimido_handler->get_elem<char>(),
+            largo_texto_comprimido
+        );
+    }
+}
+
 Texto::~Texto() {
     if (contenido_comprimido_handler != nullptr)
         memoria.release<char>(*contenido_comprimido_handler);
@@ -134,26 +159,18 @@ Texto& Texto::operator=(const Texto& other) {
     largo_texto_comprimido = other.largo_texto_comprimido;
 
     if (valido && largo_texto_comprimido > 0) {
-        Serial.println("Flag Texto::operator= 12");
         contenido_comprimido_handler = &memoria.acquire<char>(largo_texto_comprimido);
         if (!contenido_comprimido_handler->es_valido()) {
             valido = false;
             contenido_comprimido_handler = nullptr;
             return *this;
         }
-        Serial.println("Flag Texto::operator= 13");
-        Serial.println(largo_texto_comprimido);
-        Serial.println(memoria.available_memory());
-        Serial.println((uintptr_t)contenido_comprimido_handler->get_elem<char>(), HEX);
-        Serial.println((uintptr_t)other.contenido_comprimido_handler->get_elem<char>(), HEX);
         std::memcpy(
             contenido_comprimido_handler->get_elem<char>(),
             other.contenido_comprimido_handler->get_elem<char>(),
             largo_texto_comprimido
         );
-        Serial.println("Flag Texto::operator= 14");
     }
-    Serial.println("Flag Texto::operator= 15");
     return *this;
 }
 

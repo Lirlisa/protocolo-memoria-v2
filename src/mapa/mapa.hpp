@@ -4,7 +4,6 @@
 #include <global/memoria.hpp>
 #include <mensaje/mensaje_vector/mensaje_vector.hpp>
 #include <allocator/allocator.hpp>
-#include <allocator/test_allocator.hpp>
 #include <cstdint>
 #include <unordered_map>
 #include <utility>
@@ -43,8 +42,6 @@ public:
 class Mapa {
 private:
     Memory_allocator& memoria = Memoria::memoria;
-
-
     uint16_t id;
     //las llaves son nodos fuente, los valores otros map cuyas llaves son nodos destino cuyo valor es el peso del arco.
     Memory_handler& handler_grafo;
@@ -52,16 +49,12 @@ private:
     Memory_handler& handler_custom_priority_queue;
 
     void print_tabla() const;
-
     void print_grafo() const;
-
-    // std::unordered_map<uint16_t, std::unordered_map<uint16_t, float>> grafo;
-    // std::unordered_map<uint16_t, float> tabla_distancias_desde_inicio;
 
 public:
     Mapa(uint16_t _id);
-    Mapa(Mapa& instance) = delete;
-    Mapa& operator=(const Mapa& instante) = delete;
+    Mapa(Mapa&) = delete;
+    Mapa& operator=(const Mapa&) = delete;
     ~Mapa();
     void dijkstra();
     void actualizar_probabilidades(uint16_t origen, Memory_handler& handler_pares, std::size_t cantidad_pares);
